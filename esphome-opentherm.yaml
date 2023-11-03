@@ -1,0 +1,154 @@
+esphome:
+  name: esphome-opentherm
+  friendly_name: OpenTherm
+
+external_components:  
+  - source:
+      type: local
+      path: my_components
+      
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: ""
+
+ota:
+  password: ""
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esphome-Opentherm"
+    password: ""
+
+captive_portal:
+    
+# OTGW Configuration
+openthermgw:
+  pin_thermostat_in: 12
+  pin_thermostat_out: 13
+  pin_boiler_in: 4
+  pin_boiler_out: 5
+
+  ch_enable: true
+  dhw_enable: true
+  cooling_enable: false
+  otc_active: false
+  ch2_active: false
+
+button:
+  # Reboot
+  - platform: restart
+    name: "Reboot"
+
+# OTGW Temperature sensor
+dallas:
+  - pin: 14
+
+######## Text sensors ########
+text_sensor:
+  # Uptime
+  - platform: template
+    name: Uptime
+    id: uptime_human
+    icon: mdi:clock-start
+  # OTGW Informations
+  - platform: openthermgw
+    time_date:
+      name: "Date"
+
+######## Binary sensors ########
+binary_sensor:
+  # Status
+  - platform: status
+    name: "Statut" 
+
+  # OTGW Boiler status
+  - platform: openthermgw
+    fault_indication:
+      name: "Erreur Chaudière"
+    ch_active:
+      name: "Chauffage"
+    dhw_active:
+      name: "Eau Chaude"
+    flame_on:
+      name: "Flame"
+
+######## Sensors ########
+sensor:
+  # Wifi signal
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+    unit_of_measurement: dB
+    accuracy_decimals: 0
+    force_update: false
+    icon: mdi:wifi
+  - platform: uptime
+    id: uptime_seconds
+    name: "Uptime"
+    update_interval: 60s
+    unit_of_measurement: s
+    accuracy_decimals: 0
+    force_update: false
+    icon: mdi:timer
+    on_raw_value:
+      then:
+        - text_sensor.template.publish:
+            id: uptime_human
+            state: !lambda |-
+              int seconds = round(id(uptime_seconds).raw_state);
+              int days = seconds / (24 * 3600);
+              seconds = seconds % (24 * 3600);
+              int hours = seconds / 3600;
+              seconds = seconds % 3600;
+              int minutes = seconds /  60;
+              seconds = seconds % 60;
+              return (
+                (days ? to_string(days) + "d " : "") +
+                (hours ? to_string(hours) + "h " : "") +
+                (minutes ? to_string(minutes) + "m " : "") +
+                (to_string(seconds) + "s")
+              ).c_str();
+
+  # OTGW Temperature sensor
+  - platform: dallas
+    address: 0x7dc76a750e64ff28
+    name: "T°C OTGW"
+
+  # OTGW Informations
+  - platform: openthermgw
+    master_ot_version:
+      name: "Version OT Master"
+    slave_ot_version:
+      name: "Version OT Slave"
+
+  # OTGW Sensors
+    t_room:
+      name: "T° Thermostat"
+    t_boiler:
+      name: "T° Chaudière"
+    t_dhw:
+      name: "T° Eau"
+    t_outside:
+      name: "T° Extérieure"
+    t_ret:
+      name: "T° Eau Retour"
+
+    t_dhw_set_ub:
+      name: "T° Ajustement Eau Sup."
+    t_dhw_set_lb:
+      name: "T° Ajustement Eau Inf."
+    max_t_set_ub:
+      name: "T° Ajustement Chaudière Sup."
+    max_t_set_lb:
+      name: "T° Ajustement Chaudière Inf."
