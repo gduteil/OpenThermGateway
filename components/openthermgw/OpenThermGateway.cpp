@@ -1,6 +1,7 @@
 #include "OpenThermGateway.h"
 #include "esphome/core/log.h"
-
+ 
+namespace esphome { 
 namespace message_data {
     bool parse_flag8_lb_0(const unsigned long response) { return response & 0b0000000000000001; }
     bool parse_flag8_lb_1(const unsigned long response) { return response & 0b0000000000000010; }
@@ -18,6 +19,31 @@ namespace message_data {
     bool parse_flag8_hb_5(const unsigned long response) { return response & 0b0010000000000000; }
     bool parse_flag8_hb_6(const unsigned long response) { return response & 0b0100000000000000; }
     bool parse_flag8_hb_7(const unsigned long response) { return response & 0b1000000000000000; }
+
+    std::string get_flag_str_value(esphome::text_sensor::TextSensor* sensor, bool bActive)
+    {
+    	if(bActive)
+    		return "ON";
+	else
+    		return "OFF";
+    }
+    std::string parse_flag8_lb_0_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_lb_0(response)); }
+    std::string parse_flag8_lb_1_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_lb_1(response)); }
+    std::string parse_flag8_lb_2_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_lb_2(response)); }
+    std::string parse_flag8_lb_3_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_lb_3(response)); }
+    std::string parse_flag8_lb_4_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_lb_4(response)); }
+    std::string parse_flag8_lb_5_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_lb_5(response)); }
+    std::string parse_flag8_lb_6_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_lb_6(response)); }
+    std::string parse_flag8_lb_7_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_lb_7(response)); }
+    std::string parse_flag8_hb_0_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_hb_0(response)); }
+    std::string parse_flag8_hb_1_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_hb_1(response)); }
+    std::string parse_flag8_hb_2_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_hb_2(response)); }
+    std::string parse_flag8_hb_3_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_hb_3(response)); }
+    std::string parse_flag8_hb_4_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_hb_4(response)); }
+    std::string parse_flag8_hb_5_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_hb_5(response)); }
+    std::string parse_flag8_hb_6_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_hb_6(response)); }
+    std::string parse_flag8_hb_7_str(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return get_flag_str_value(sensor, parse_flag8_hb_7(response)); }
+
     uint8_t parse_u8_lb(const unsigned long response) { return (uint8_t) (response & 0xff); }
     uint8_t parse_u8_hb(const unsigned long response) { return (uint8_t) ((response >> 8) & 0xff); }
     int8_t parse_s8_lb(const unsigned long response) { return (int8_t) (response & 0xff); }
@@ -29,7 +55,7 @@ namespace message_data {
         return (data & 0x8000) ? -(0x10000L - data) / 256.0f : data / 256.0f; 
     }
 
-    std::string parse_str_date(const unsigned long response) { return "00:00 00/00/0000"; }
+    std::string parse_str_date(esphome::text_sensor::TextSensor* sensor, const unsigned long response) { return "00:00 00/00/0000"; }
 
     unsigned int write_flag8_lb_0(const bool value, const unsigned int data) { return value ? data | 0b0000000000000001 : data & 0b1111111111111110; }
     unsigned int write_flag8_lb_1(const bool value, const unsigned int data) { return value ? data | 0b0000000000000010 : data & 0b1111111111111101; }
@@ -57,18 +83,17 @@ namespace message_data {
     
     unsigned int write_str_date(const std::string value, const unsigned int data) { return 0; }
 } // namespace message_data
-
+}
 #define OPENTHERMGW_IGNORE_1(x)
 #define OPENTHERMGW_IGNORE_2(x, y)
 
 namespace esphome {
     namespace OpenThermGateway {
-
         static const char * TAG = "OpenThermGateway";
 	OpenTherm *OpenThermGateway::m_otThermostat=NULL;
 	OpenTherm *OpenThermGateway::m_otBoiler=NULL;
 
-        OpenThermGateway::OpenThermGateway() : PollingComponent(10000)
+        OpenThermGateway::OpenThermGateway() : PollingComponent(100)
 	{
 	}
 
@@ -80,7 +105,7 @@ namespace esphome {
 			m_otThermostat=NULL;
 		}
 		
-		if(m_otThermostat!=NULL)
+		if(m_otBoiler!=NULL)
 		{
 			delete m_otBoiler;
 			m_otBoiler=NULL;
@@ -113,8 +138,37 @@ namespace esphome {
 	        m_otThermostat->begin(handleInterruptThermostat, processRequestThermostat, this);
 
 	        m_otBoiler=new OpenTherm(m_pinBoilerIn, m_pinBoilerOut);
-	        m_otBoiler->begin(handleInterruptBoiler);
+	        m_otBoiler->begin(handleInterruptBoiler);	        
+	        
+		m_msLastLoop=millis();
+		
+		m_current_message_iterator = m_initial_messages.begin();
+		m_auto_update_message_iterator = m_map_auto_update_messages.begin();		
         }
+ 
+	void OpenThermGateway::on_shutdown() 
+	{
+		if(m_otThermostat!=NULL)
+			m_otThermostat->end();
+
+		if(m_otBoiler!=NULL)
+			m_otBoiler->end();
+	}
+
+	void OpenThermGateway::add_initial_message(OpenThermMessageID message_id)
+	{			
+		ESP_LOGD("OpenThermGateway", "Adding initial message %d", message_id);
+		if(std::find(m_initial_messages.begin(), m_initial_messages.end(), message_id)==m_initial_messages.end())
+			m_initial_messages.insert(message_id); 
+	}
+
+	void OpenThermGateway::add_auto_update_message(OpenThermMessageID message_id, int32_t secUpdateTime)
+	{
+		ESP_LOGD("OpenThermGateway", "Adding auto update message %d every %d sec", message_id, secUpdateTime);
+		m_map_auto_update_messages[message_id].msTimeSinceLastUpdate=0;
+		if(m_map_auto_update_messages[message_id].msTimeUpdate==0 || m_map_auto_update_messages[message_id].msTimeUpdate>secUpdateTime*1000)
+			m_map_auto_update_messages[message_id].msTimeUpdate=secUpdateTime*1000;
+	}
 
 	void IRAM_ATTR OpenThermGateway::handleInterruptThermostat()
 	{
@@ -130,13 +184,17 @@ namespace esphome {
 
 	void OpenThermGateway::processRequestThermostat(unsigned long request, OpenThermResponseStatus status)
 	{
-		if(status==OpenThermResponseStatus::SUCCESS)
-		{
-			OpenThermMessageType requestType=m_otThermostat->getMessageType(request);
-			OpenThermMessageID requestDataID=m_otThermostat->getDataID(request);
-			uint16_t requestData=(uint16_t)request;
+		if(request==0)
+			return;				
+		
+		OpenThermMessageType requestType=m_otThermostat->getMessageType(request);
+		OpenThermMessageID requestDataID=m_otThermostat->getDataID(request);
+		uint16_t requestData=(uint16_t)request;
 			
-		        //ESP_LOGD(TAG, "Thermostat request (%08X) : MessageType: %s, DataID: %d, Data: %x (%s)", request, m_otThermostat->messageTypeToString(requestType), requestDataID, requestData, m_otThermostat->statusToString(status));	
+		ESP_LOGD(TAG, "Thermostat request (%08X) : MessageType: %s, DataID: %d, Data: %x] (%s)", request, m_otThermostat->messageTypeToString(requestType), requestDataID, requestData, m_otThermostat->statusToString(status));
+
+		if(status==OpenThermResponseStatus::SUCCESS)
+		{			
 			parseRequest(requestType, requestDataID, requestData);
 			if(m_otBoiler!=NULL)
 			{
@@ -147,7 +205,6 @@ namespace esphome {
 					OpenThermMessageID responseDataID=m_otThermostat->getDataID(response);
 					uint16_t responseData=(uint16_t)response;
 						
-					//ESP_LOGD(TAG, "Boiler response (%08X) : MessageType: %s, DataID: %d, Data: %x] (%s)", response, m_otBoiler->messageTypeToString(responseType), responseDataID, responseData, m_otBoiler->statusToString(status));					
 					m_otThermostat->sendResponse(response);
 					parseResponse(responseType, responseDataID, responseData);
 				}
@@ -162,6 +219,17 @@ namespace esphome {
 	void OpenThermGateway::parseResponse(OpenThermMessageType type, OpenThermMessageID dataID, uint16_t data)
 	{
 		bool bHandled=false;
+		ESP_LOGD(TAG, "Boiler response [MessageType: %s, DataID: %d, Data: %x]", m_otBoiler->messageTypeToString(type), dataID, data);
+		
+		if(dataID==OpenThermMessageID::Status)
+		{
+			m_bCHEnable = message_data::parse_flag8_hb_0(data);
+			m_bDHWEnable = message_data::parse_flag8_hb_1(data);
+			m_bCoolingEnable = message_data::parse_flag8_hb_2(data);
+			m_bOTCActive = message_data::parse_flag8_hb_3(data);
+			m_bCH2Active = message_data::parse_flag8_hb_4(data);
+			m_bStatusReceived=true;
+		}			
 		
 		// Special messages
 		switch(dataID)
@@ -201,6 +269,8 @@ namespace esphome {
 				    bHandled=true;
 			#define OPENTHERMGW_MESSAGE_RESPONSE_ENTITY(key, msg_data) \
 			    	this->key->publish_state(message_data::parse_ ## msg_data(data));
+			#define OPENTHERMGW_MESSAGE_RESPONSE_TEXT_ENTITY(key, msg_data) \
+			    	this->key->publish_state(message_data::parse_ ## msg_data(this->key, data));
 			#define OPENTHERMGW_MESSAGE_RESPONSE_POSTSCRIPT \
 			    	break;
 
@@ -221,17 +291,32 @@ namespace esphome {
 
 			switch (dataID) 
 			{
-				OPENTHERMGW_TEXT_SENSOR_MESSAGE_HANDLERS(OPENTHERMGW_MESSAGE_RESPONSE_MESSAGE, OPENTHERMGW_MESSAGE_RESPONSE_ENTITY, , OPENTHERMGW_MESSAGE_RESPONSE_POSTSCRIPT, )
+				OPENTHERMGW_TEXT_SENSOR_MESSAGE_HANDLERS(OPENTHERMGW_MESSAGE_RESPONSE_MESSAGE, OPENTHERMGW_MESSAGE_RESPONSE_TEXT_ENTITY, , OPENTHERMGW_MESSAGE_RESPONSE_POSTSCRIPT, )
+				default: break;
+			}
+
+			switch (dataID) 
+			{
+				OPENTHERMGW_SWITCH_MESSAGE_HANDLERS(OPENTHERMGW_MESSAGE_RESPONSE_MESSAGE, OPENTHERMGW_MESSAGE_RESPONSE_ENTITY, , OPENTHERMGW_MESSAGE_RESPONSE_POSTSCRIPT, )
 				default: break;
 			}
 		}
-		if(!bHandled)		
+		
+		if(bHandled)
+		{
+			std::unordered_map<OpenThermMessageID, SAutoUpdateMessage>::iterator it=m_map_auto_update_messages.find(dataID);
+			if(it!=m_map_auto_update_messages.end())
+			{
+				(*it).second.msTimeSinceLastUpdate=0;
+			}
+		} else {		
 			ESP_LOGD(TAG, "Unhandled response [MessageType: %s, DataID: %d, Data: %x]", m_otBoiler->messageTypeToString(type), dataID, data);
+		}
 	}
 	
 	void OpenThermGateway::publishDate()
 	{
-		if(m_dateMinute==0 || m_dateHour==0 || m_dateDay==0 || m_dateMonth==0 || m_dateYear==0)
+		if(m_dateMinute==0xFF || m_dateHour==0xFF || m_dateDay==0xFF || m_dateMonth==0xFF || m_dateYear==0xFFFF)
 			return;
 			
 		char szDate[64];
@@ -256,12 +341,158 @@ namespace esphome {
 
         void OpenThermGateway::loop() 
         {        	
-		if(m_otThermostat!=NULL)
-			m_otThermostat->process();
+        	unsigned long loopStart=millis();
+        	unsigned long loopTime=loopStart-m_msLastLoop;
+        	m_msLastLoop=loopStart;
+        	
+	        if(m_bStatusReceived && m_bInitializing)
+	        {	        
+		    	if (m_bInitializing && m_bStatusReceived && m_otBoiler!=NULL && m_otBoiler->isReady())
+		    	{
+				if (m_current_message_iterator == m_initial_messages.end()) 
+				{
+				    m_bInitializing = false;
+				} else {
+					unsigned int request = build_request(*m_current_message_iterator);										
+					unsigned int response = m_otBoiler->sendRequest(request);											
+					if (response!=0) 
+					{		
+						OpenThermMessageType responseType=m_otThermostat->getMessageType(response);
+						OpenThermMessageID responseDataID=m_otThermostat->getDataID(response);
+						uint16_t responseData=(uint16_t)response;
+
+						ESP_LOGD(TAG, "Boiler response (%08X) : MessageType: %s, DataID: %d, Data: %x]", response, m_otBoiler->messageTypeToString(responseType), responseDataID, responseData);					
+						parseResponse(responseType, responseDataID, responseData);
+					}
+					m_current_message_iterator++;
+				}
+			}
+		} else if(m_otThermostat!=NULL) {
+			bool bDidProcessMessage=m_otThermostat->process();		
+
+			for(std::unordered_map<OpenThermMessageID, SAutoUpdateMessage>::iterator it=m_map_auto_update_messages.begin(); it!=m_map_auto_update_messages.end(); ++it)
+				(*it).second.msTimeSinceLastUpdate+=loopTime;
+				
+			// Send auto-update message during thermostat delay to avoid messing communication, and mas 1 message every 2 secs
+			m_msTimeSinceLastAutoUpdate+=loopTime;			
+			if(!bDidProcessMessage && m_msTimeSinceLastAutoUpdate>=2000 && m_otThermostat!=NULL && m_otThermostat->status==OpenThermStatus::DELAY && m_otBoiler->status==OpenThermStatus::READY)
+			{
+				while(m_auto_update_message_iterator!=m_map_auto_update_messages.end())
+				{
+					if((*m_auto_update_message_iterator).second.msTimeSinceLastUpdate>=(*m_auto_update_message_iterator).second.msTimeUpdate)
+					{
+						unsigned int request = build_request((*m_auto_update_message_iterator).first);									
+						unsigned int response = m_otBoiler->sendRequest(request);
+						m_msTimeSinceLastAutoUpdate=0;
+						if (response!=0) 
+						{		
+							OpenThermMessageType responseType=m_otBoiler->getMessageType(response);
+							OpenThermMessageID responseDataID=m_otBoiler->getDataID(response);
+							uint16_t responseData=(uint16_t)response;
+
+							ESP_LOGD(TAG, "Auto-update response (%08X) (%d>=%d) : MessageType: %s, DataID: %d, Data: %x]", response, (*m_auto_update_message_iterator).second.msTimeSinceLastUpdate, (*m_auto_update_message_iterator).second.msTimeUpdate, m_otBoiler->messageTypeToString(responseType), responseDataID, responseData);					
+							parseResponse(responseType, responseDataID, responseData);
+							m_auto_update_message_iterator++;
+						}
+						break;
+					}
+					m_auto_update_message_iterator++;
+				}
+				if(m_auto_update_message_iterator==m_map_auto_update_messages.end())
+					m_auto_update_message_iterator=m_map_auto_update_messages.begin();
+			}
+		}		
         }
 
 	void OpenThermGateway::update()
 	{
-	}	
+	}
+	
+	unsigned int OpenThermGateway::build_request(OpenThermMessageID request_id) 
+	{
+		if(m_otBoiler==NULL)
+			return 0;
+			
+		// First, handle the status request. This requires special logic, because we
+		// wouldn't want to inadvertently disable domestic hot water, for example.
+		// It is also included in the macro-generated code below, but that will
+		// never be executed, because we short-circuit it here. 
+		if (request_id == OpenThermMessageID::Status) 
+		{
+			ESP_LOGD(TAG, "Building Status request");
+			bool ch_enable = 
+				m_bCHEnable
+				&& 
+				#ifdef OPENTHERMGW_READ_ch_enable
+				OPENTHERMGW_READ_ch_enable
+				#else
+				true
+				#endif 
+				&& 
+				#ifdef OPENTHERMGW_READ_t_set
+				OPENTHERMGW_READ_t_set > 0.0
+				#else
+				true
+				#endif
+				;
+		
+			bool dhw_enable = 
+				m_bDHWEnable
+				&& 
+				#ifdef OPENTHERMGW_READ_dhw_enable
+				OPENTHERMGW_READ_dhw_enable
+				#else
+				true
+				#endif
+				;
+
+			bool cooling_enable = 
+				m_bCoolingEnable
+				&& 
+				#ifdef OPENTHERMGW_READ_cooling_enable
+				OPENTHERMGW_READ_cooling_enable
+				#else
+				true
+				#endif 
+				&& 
+				#ifdef OPENTHERMGW_READ_cooling_control
+				OPENTHERMGW_READ_cooling_control > 0.0
+				#else
+				true
+				#endif
+				;
+
+			bool otc_active = 
+				m_bOTCActive
+				&& 
+				#ifdef OPENTHERMGW_READ_otc_active
+				OPENTHERMGW_READ_otc_active
+				#else
+				true
+				#endif
+				;
+
+			bool ch2_active = 
+				m_bCH2Active
+				&& 
+				#ifdef OPENTHERMGW_READ_ch2_active
+				OPENTHERMGW_READ_ch2_active
+				#else
+				true
+				#endif 
+				&& 
+				#ifdef OPENTHERMGW_READ_t_set_ch2
+				OPENTHERMGW_READ_t_set_ch2 > 0.0
+				#else
+				true
+				#endif
+				;
+
+			return m_otBoiler->buildSetBoilerStatusRequest(ch_enable, dhw_enable, cooling_enable, otc_active, ch2_active);
+		}
+		
+		return m_otBoiler->buildRequest(OpenThermRequestType::READ, request_id, 0);
+		
+	}		
     } // namespace OpenThermGateway
 } // namespace esphome

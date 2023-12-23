@@ -62,15 +62,17 @@ def define_readers(component_type: str, keys: List[str]) -> None:
         cg.add_define(f"OPENTHERMGW_READ_{key}", cg.RawExpression(f"this->{key}_{component_type.lower()}->state"))
 
 def add_messages(hub: cg.MockObj, keys: List[str], schema_: schema.Schema[TSchema]):
-    messages: Set[Tuple[str, bool]] = set()
-#    for key in keys:
-#        messages.add((schema_[key]["message"], schema_[key]["keep_updated"]))
-#    for msg, keep_updated in messages:
-#        msg_expr = cg.RawExpression(f"OpenThermMessageID::{msg}")
-#        if keep_updated:
-#            cg.add(hub.add_repeating_message(msg_expr))
-#        else:
-#            cg.add(hub.add_initial_message(msg_expr))
+    messages: Set[Tuple[str, bool, int]] = set()
+    for key in keys:
+        messages.add((schema_[key]["message"], schema_[key]["init"], schema_[key]["update_time"]))
+    for msg, init, update_time in messages:
+        msg_expr = cg.RawExpression(f"OpenThermMessageID::{msg}")
+        if init:
+            cg.add(hub.add_initial_message(msg_expr))
+            
+        if update_time>0:
+            cg.add(hub.add_auto_update_message(msg_expr, update_time))
+            
 
 def add_property_set(var: cg.MockObj, config_key: str, config: Dict[str, Any]) -> None:
     if config_key in config:

@@ -101,12 +101,12 @@ unsigned long OpenTherm::sendRequest(unsigned long request)
 		process();
 		yield();
 	}
-
 	if (!sendRequestAsync(request)) return 0;
 	while (!isReady()) {
 		process();
 		yield();
 	}
+
 	return response;
 }
 
@@ -139,26 +139,29 @@ OpenThermResponseStatus OpenTherm::getLastResponseStatus()
 void IRAM_ATTR OpenTherm::handleInterrupt()
 {
 	unsigned long newTs = micros();
-
-	// We are not supposed to get interrupt less than 500us
-	if(newTs - lastInterruptTs<250)
-		return;
 		
+	unsigned long deltaTs = newTs - responseTimestamp;
+
+	// Wait 30us before read state to make sure digitalRead() will return the "correct" value
+	// I don't understand why but sometimes the interrupt is called but the input level is still in transition
+	delayMicroseconds(30);
+	
+	int state=readState();
+
 	lastInterruptTs=newTs;
 	
 	if (isReady())
 	{
-		if (isSlave && readState() == HIGH) {
+		if (isSlave && state == HIGH) {
 		   status = OpenThermStatus::RESPONSE_WAITING;
 		}
 		else {
 			return;
 		}
-	}
-
-	unsigned long deltaTs = newTs - responseTimestamp;
+	}					
+	
 	if (status == OpenThermStatus::RESPONSE_WAITING) {
-		if (readState() == HIGH) {
+		if (state == HIGH) {
 			status = OpenThermStatus::RESPONSE_START_BIT;
 			responseTimestamp = newTs;
 		}
@@ -168,7 +171,7 @@ void IRAM_ATTR OpenTherm::handleInterrupt()
 		}
 	}
 	else if (status == OpenThermStatus::RESPONSE_START_BIT) {
-		if ((deltaTs > 250) && (deltaTs < 750) && readState() == LOW) {
+		if ((deltaTs > 250) && (deltaTs < 750) && state == LOW) {
 			status = OpenThermStatus::RESPONSE_RECEIVING;
 			responseTimestamp = newTs;
 			responseBitIndex = 0;
@@ -181,7 +184,7 @@ void IRAM_ATTR OpenTherm::handleInterrupt()
 	else if (status == OpenThermStatus::RESPONSE_RECEIVING) {
 		if ((deltaTs) > 750 && deltaTs < 1250) { // bitDuration should not bigger than 1500			
 			if (responseBitIndex < 32) {
-				response = (response << 1) | !readState();
+				response = (response << 1) | !state;
 				responseTimestamp = newTs;
 				responseBitIndex++;
 			}
@@ -196,15 +199,17 @@ void IRAM_ATTR OpenTherm::handleInterrupt()
 	}
 }
 
-void OpenTherm::process()
+bool OpenTherm::process()
 {
 	noInterrupts();
 	OpenThermStatus st = status;
 	unsigned long ts = responseTimestamp;
 	interrupts();
 	
+	bool bDidProcessMessage=false;
+	
 	if (st == OpenThermStatus::READY) 
-		return;
+		return bDidProcessMessage;
 		
 	unsigned long newTs = micros();		
 	if (st != OpenThermStatus::NOT_INITIALIZED && st != OpenThermStatus::DELAY && (newTs - ts) > 1000000) {
@@ -212,6 +217,7 @@ void OpenTherm::process()
 		responseStatus = OpenThermResponseStatus::TIMEOUT;
 		if (processResponseCallback != NULL) {
 			processResponseCallback(response, responseStatus, pCallbackUser);
+			bDidProcessMessage=true;
 		}
 	}
 	else if (st == OpenThermStatus::RESPONSE_INVALID) {
@@ -219,6 +225,7 @@ void OpenTherm::process()
 		responseStatus = OpenThermResponseStatus::INVALID;
 		if (processResponseCallback != NULL) {
 			processResponseCallback(response, responseStatus, pCallbackUser);
+			bDidProcessMessage=true;
 		}
 	}
 	else if (st == OpenThermStatus::RESPONSE_READY) {
@@ -230,6 +237,7 @@ void OpenTherm::process()
 
 		if (processResponseCallback != NULL) {
 			processResponseCallback(response, responseStatus, pCallbackUser);
+			bDidProcessMessage=true;
 		}
 	}
 	else if (st == OpenThermStatus::DELAY) {
@@ -237,6 +245,7 @@ void OpenTherm::process()
 			status = OpenThermStatus::READY;
 		}
 	}
+	return bDidProcessMessage;
 }
 
 bool OpenTherm::parity(unsigned long frame) //odd parity

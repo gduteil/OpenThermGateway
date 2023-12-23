@@ -5,6 +5,10 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/text_sensor/text_sensor.h"
+#include <unordered_set>
+#include <unordered_map>
+#include <algorithm>
+#include "switch.h"
 
 // Ensure that all component macros are defined, even if the component is not used
 #ifndef OPENTHERMGW_SENSOR_LIST
@@ -52,12 +56,18 @@
 #endif
 
 namespace esphome {
-    namespace OpenThermGateway {
+    namespace OpenThermGateway {    
+    	struct SAutoUpdateMessage
+    	{
+    		unsigned long msTimeUpdate=0;
+    		unsigned long msTimeSinceLastUpdate=0;
+    	};
+    	
         class OpenThermGateway: public PollingComponent, public api::CustomAPIDevice {
         	public: 
 			OpenThermGateway();
 			virtual ~OpenThermGateway();
-		
+			
 			void set_pin_thermostat_in(uint8_t pin) { m_pinThermostatIn=pin; }
 			void set_pin_thermostat_out(uint8_t pin) { m_pinThermostatOut=pin; }
 			void set_pin_boiler_in(uint8_t pin) { m_pinBoilerIn=pin; }
@@ -69,6 +79,9 @@ namespace esphome {
 			void set_otc_active(bool bOTCActive) { m_bOTCActive = bOTCActive; }
 			void set_ch2_active(bool bCH2Active) { m_bCH2Active = bCH2Active; }
 			
+			void add_initial_message(OpenThermMessageID message_id);			
+			void add_auto_update_message(OpenThermMessageID message_id, int32_t secUpdateTime);
+			
 			#define OPENTHERMGW_SET_SENSOR(entity) void set_ ## entity(sensor::Sensor* sensor) { this->entity = sensor; }
 			OPENTHERMGW_SENSOR_LIST(OPENTHERMGW_SET_SENSOR, )
 
@@ -78,7 +91,7 @@ namespace esphome {
 			#define OPENTHERMGW_SET_TEXT_SENSOR(entity) void set_ ## entity(text_sensor::TextSensor* text_sensor) { this->entity = text_sensor; }
 			OPENTHERMGW_TEXT_SENSOR_LIST(OPENTHERMGW_SET_TEXT_SENSOR, )
 
-			#define OPENTHERMGW_SET_SWITCH(entity) void set_ ## entity(OpenthermSwitch* sw) { this->entity = sw; }
+			#define OPENTHERMGW_SET_SWITCH(entity) void set_ ## entity(OpenThermGatewaySwitch* sw) { this->entity = sw; }
 			OPENTHERMGW_SWITCH_LIST(OPENTHERMGW_SET_SWITCH, )
 
 			#define OPENTHERMGW_SET_NUMBER(entity) void set_ ## entity(OpenthermNumber* number) { this->entity = number; }
@@ -91,6 +104,7 @@ namespace esphome {
 			OPENTHERMGW_INPUT_SENSOR_LIST(OPENTHERMGW_SET_INPUT_SENSOR, )
 			
 			void setup() override;
+			void on_shutdown() override;			
 			void dump_config() override;
 //			void control(const climate::ClimateCall & call) override;
 //		 	climate::ClimateTraits traits() override;
@@ -103,6 +117,7 @@ namespace esphome {
 				if(pCallbackUser!=NULL)
 					((OpenThermGateway *)pCallbackUser)->processRequestThermostat(request, status);
 			}
+
 	        protected:
 
 		private:
@@ -117,13 +132,16 @@ namespace esphome {
 			bool m_bOTCActive = false;
 			bool m_bCH2Active = false;
 
-			uint16_t m_dateYear = 0;
-			uint8_t m_dateMonth = 0;
-			uint8_t m_dateDay = 0;
-			uint8_t m_dateDOW = 0;
-			uint8_t m_dateHour = 0;		
-			uint8_t m_dateMinute = 0;
+			uint16_t m_dateYear = 0xFFFF;
+			uint8_t m_dateMonth = 0xFF;
+			uint8_t m_dateDay = 0xFF;
+			uint8_t m_dateDOW = 0xFF;
+			uint8_t m_dateHour = 0xFF;		
+			uint8_t m_dateMinute = 0xFF;
 			std::string m_strDate;
+			
+			unsigned long m_msLastLoop=0;
+			unsigned long m_msTimeSinceLastAutoUpdate=0;
 			
 			// Use macros to create fields for every entity specified in the ESPHome configuration
 			#define OPENTHERMGW_DECLARE_SENSOR(entity) sensor::Sensor* entity;
@@ -135,7 +153,7 @@ namespace esphome {
 			#define OPENTHERMGW_DECLARE_TEXT_SENSOR(entity) text_sensor::TextSensor* entity;
 			OPENTHERMGW_TEXT_SENSOR_LIST(OPENTHERMGW_DECLARE_TEXT_SENSOR, )
 
-			#define OPENTHERMGW_DECLARE_SWITCH(entity) OpenthermSwitch* entity;
+			#define OPENTHERMGW_DECLARE_SWITCH(entity) OpenThermGatewaySwitch* entity;
 			OPENTHERMGW_SWITCH_LIST(OPENTHERMGW_DECLARE_SWITCH, )
 
 			#define OPENTHERMGW_DECLARE_NUMBER(entity) OpenthermNumber* entity;
@@ -147,11 +165,25 @@ namespace esphome {
 			#define OPENTHERMGW_DECLARE_INPUT_SENSOR(entity) sensor::Sensor* entity;
 			OPENTHERMGW_INPUT_SENSOR_LIST(OPENTHERMGW_DECLARE_INPUT_SENSOR, )
 			    
+			// The set of initial messages to send on starting communication with the boiler
+			std::unordered_set<OpenThermMessageID> m_initial_messages;
+			
+			// Map with periodic messages
+			std::unordered_map<OpenThermMessageID, SAutoUpdateMessage> m_map_auto_update_messages;
+			
+			bool m_bStatusReceived = false;
+			bool m_bInitializing = true;
+			
+			std::unordered_set<OpenThermMessageID>::const_iterator m_current_message_iterator;
+			std::unordered_map<OpenThermMessageID, SAutoUpdateMessage>::const_iterator m_auto_update_message_iterator;
+			
     			static OpenTherm *m_otThermostat;
 			static OpenTherm *m_otBoiler;
 			
 			static void IRAM_ATTR handleInterruptThermostat();
 			static void IRAM_ATTR handleInterruptBoiler();
+
+			unsigned int build_request(OpenThermMessageID request_id);
 			
 			void processRequestThermostat(unsigned long request, OpenThermResponseStatus status);		
 			

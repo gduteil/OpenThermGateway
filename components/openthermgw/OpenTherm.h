@@ -90,7 +90,10 @@ enum OpenThermMessageID {
 	MaxTSet, // f8.8  Max CH water setpoint (°C)  (Remote parameters 2)
 	Hcratio, // f8.8  OTC heat curve ratio (°C)  (Remote parameter 3)
 	
+	Unknown99=99,	
+
 	RemoteOverrideFunction = 100, // flag8 / -  Function of manual and program changes in master and remote room setpoint.
+	
 	OEMDiagnosticCode = 115, // u16  OEM-specific diagnostic/service code
 	BurnerStarts, // u16  Number of starts burner
 	CHPumpStarts, // u16  Number of starts CH pump
@@ -104,6 +107,25 @@ enum OpenThermMessageID {
 	OpenThermVersionSlave, // f8.8  The implemented version of the OpenTherm Protocol Specification in the slave.
 	MasterVersion, // u8 / u8  Master product version number and type
 	SlaveVersion, // u8 / u8  Slave product version number and type
+
+
+	Unknown140 = 140,
+	Unknown141,
+	Unknown142,	
+	Unknown143,	
+	Unknown144,	
+	Unknown145,	
+	Unknown146,	
+	Unknown147,	
+	Unknown148,	
+	Unknown149,	
+	Unknown150,
+	Unknown151,	
+	Unknown152,	
+
+	Unknown161 = 161,
+	
+	Unknown180 = 180
 };
 
 enum OpenThermStatus {
@@ -129,14 +151,20 @@ public:
 	unsigned long sendRequest(unsigned long request);
 	bool sendResponse(unsigned long request);
 	bool sendRequestAsync(unsigned long request);
+
+	bool sendRequestTimer(unsigned long request);
+	bool sendResponseTimer(unsigned long response);
+	
 	unsigned long buildRequest(OpenThermMessageType type, OpenThermMessageID id, unsigned int data);
 	unsigned long buildResponse(OpenThermMessageType type, OpenThermMessageID id, unsigned int data);
 	unsigned long getLastResponse();
 	OpenThermResponseStatus getLastResponseStatus();
 	const char *statusToString(OpenThermResponseStatus status);
 	void handleInterrupt();
-	void process();
+	bool process();
 	void end();
+
+	void handleTimerInterrupt();
 
 	bool parity(unsigned long frame);
 	OpenThermMessageType getMessageType(unsigned long message);
@@ -166,12 +194,12 @@ public:
 	unsigned long setBoilerStatus(bool enableCentralHeating, bool enableHotWater = false, bool enableCooling = false, bool enableOutsideTemperatureCompensation = false, bool enableCentralHeating2 = false);
 	bool setBoilerTemperature(float temperature);
 	float getBoilerTemperature();
-    float getReturnTemperature();
-    bool setDHWSetpoint(float temperature);
-    float getDHWTemperature();
-    float getModulation();
-    float getPressure();
-    unsigned char getFault();
+	float getReturnTemperature();
+	bool setDHWSetpoint(float temperature);
+	float getDHWTemperature();
+	float getModulation();
+	float getPressure();
+	unsigned char getFault();
 
 private:
 	const int inPin;
@@ -192,7 +220,7 @@ private:
 	void sendBit(bool high);
 	void(*handleInterruptCallback)();
 	void(*processResponseCallback)(unsigned long, OpenThermResponseStatus, void *);
-	void *pCallbackUser;
+	void *pCallbackUser;	
 };
 
 #ifndef ICACHE_RAM_ATTR
