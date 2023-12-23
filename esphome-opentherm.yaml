@@ -1,14 +1,16 @@
 esphome:
-  name: esphome-opentherm
+  name: opentherm
   friendly_name: OpenTherm
 
 external_components:  
   - source:
       type: local
       path: my_components
-      
-esp8266:
-  board: esp01_1m
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
 
 # Enable logging
 logger:
@@ -27,23 +29,36 @@ wifi:
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "Esphome-Opentherm"
+    ssid: "Opentherm Fallback Hotspot"
     password: ""
 
 captive_portal:
     
 # OTGW Configuration
 openthermgw:
-  pin_thermostat_in: 12
-  pin_thermostat_out: 13
-  pin_boiler_in: 4
-  pin_boiler_out: 5
+  pin_thermostat_in: 17
+  pin_thermostat_out: 18
+  pin_boiler_in: 13
+  pin_boiler_out: 27
 
   ch_enable: true
   dhw_enable: true
   cooling_enable: false
   otc_active: false
   ch2_active: false
+
+switch:
+  - platform: openthermgw
+    ch_enable:
+      name: "Chauffage"
+    dhw_enable:
+      name: "Eau Chaude"
+    cooling_enable:
+      name: "Climatisation"
+    otc_active:
+      name: "Compensation T° Ext."
+    ch2_active:
+      name: "Chauffage 2"
 
 button:
   # Reboot
@@ -52,7 +67,7 @@ button:
 
 # OTGW Temperature sensor
 dallas:
-  - pin: 14
+  - pin: 16
 
 ######## Text sensors ########
 text_sensor:
@@ -61,10 +76,49 @@ text_sensor:
     name: Uptime
     id: uptime_human
     icon: mdi:clock-start
+
   # OTGW Informations
   - platform: openthermgw
     time_date:
       name: "Date"
+
+  # OTGW Boiler config
+    dhw_present:
+      name: "Chauffe-eau"
+      filters:
+        - substitute:
+          - "OFF -> Not present"
+          - "ON -> Present"
+    control_type:
+      name: "Type de contrôle"
+      filters:
+        - substitute:
+          - "OFF -> Modulating"
+          - "ON -> On/Off"
+    cooling_supported:
+      name: "Refroidissement supporté"
+      filters:
+        - substitute:
+          - "OFF -> No"
+          - "ON -> Yes"
+    dhw_config:
+      name: "Configuration chauffe-eau"
+      filters:
+        - substitute:
+          - "OFF -> Instantaneous"
+          - "ON -> Storage tank"
+    lowoff_pumpcontrol_allowed:
+      name: "Contrôle de pompe"
+      filters:
+        - substitute:
+          - "OFF -> Allowed"
+          - "ON -> Not allowed"
+    ch2_present:
+      name: "CH2"
+      filters:
+        - substitute:
+          - "OFF -> Not present"
+          - "ON -> Present"
 
 ######## Binary sensors ########
 binary_sensor:
@@ -81,7 +135,27 @@ binary_sensor:
     dhw_active:
       name: "Eau Chaude"
     flame_on:
-      name: "Flame"
+      name: "Flamme"
+
+  # OTGW Override priorities
+    func_manualoverridepriority:
+      name: Priorité Surcharge Manuelle
+    func_programoverridepriority:
+      name: Priorité Surcharge Programmée
+
+  # OTGW Boiler errors
+    fault_service:
+      name: "Service requis"
+    fault_lockout:
+      name: "Blocage distant actif"
+    fault_waterpress:
+      name: "Pression d'eau faible"
+    fault_gasflame:
+      name: "Erreur de gaz/flamme"
+    fault_airpress:
+      name: "Erreur de pression d'air"
+    fault_watertemp:
+      name: "T° Eau trop élevée"
 
 ######## Sensors ########
 sensor:
@@ -123,16 +197,53 @@ sensor:
   # OTGW Temperature sensor
   - platform: dallas
     address: 0x7dc76a750e64ff28
-    name: "T°C OTGW"
+    name: "T° OTGW"
+
+  - platform: openthermgw  
+  # OTGW Diagnostics
+    fault_oem:
+      name: "Code erreur"
+    diag_oem:
+      name: "Code diagnostic"
 
   # OTGW Informations
-  - platform: openthermgw
+    tr_override:
+      name: "Surcharge Distante"
+
+    nb_startburner:
+      name: "Nb Allumage Brûleur"
+    nb_startchpump:
+      name: "Nb Allumage Pompe CH"
+    nb_startdhwpump:
+      name: "Nb Allumage Pompe Eau"
+    nb_burnerhours:
+      name: "Nb heures Brûleur"
+    nb_chpumphours:
+      name: "Nb heures Pompe CH"
+    nb_dhwpumphours:
+      name: "Nb heures Pompe Eau"
+    nb_dhwburnerhours:
+      name: "Nb heures Brûleur Eau"
+
+    master_memberid:
+      name: "MemberID Master"
+    slave_memberid:
+      name: "MemberID Slave"
     master_ot_version:
       name: "Version OT Master"
     slave_ot_version:
       name: "Version OT Slave"
 
+      
   # OTGW Sensors
+    t_set:
+      name: "T° Consigne"
+    t_set_ch2:
+      name: "T° Consigne CH2"
+    t_set_dhw:
+      name: "T° Consigne Eau"
+    t_roomset:
+      name: "T° Demandée"  
     t_room:
       name: "T° Thermostat"
     t_boiler:
@@ -142,7 +253,17 @@ sensor:
     t_outside:
       name: "T° Extérieure"
     t_ret:
-      name: "T° Eau Retour"
+      name: "T° Retour"
+    t_exhaust:
+      name: "T° Echappement"
+
+    bar_chpress:
+      name: "Pression Eau CH"    
+    ls_dhwflowrate:
+      name: "Debit Eau"
+
+    pc_relmod:
+      name: "Niveau modulation relatif"
 
     t_dhw_set_ub:
       name: "T° Ajustement Eau Sup."
@@ -152,3 +273,43 @@ sensor:
       name: "T° Ajustement Chaudière Sup."
     max_t_set_lb:
       name: "T° Ajustement Chaudière Inf."
+    max_t_set:
+      name: "T° Ajustement Eau Chaudière Max"
+      
+
+    # Unknown messages
+    Unknown99:
+      name: "Unknown99"
+
+    Unknown140:
+      name: "Unknown140"
+    Unknown141:
+      name: "Unknown141"
+    Unknown142:
+      name: "Unknown142"
+    Unknown143:
+      name: "Unknown143"
+    Unknown144:
+      name: "Unknown144"
+    Unknown145:
+      name: "Unknown145"
+    Unknown146:
+      name: "Unknown146"
+    Unknown147:
+      name: "Unknown147"
+    Unknown148:
+      name: "Unknown148"
+    Unknown149:
+      name: "Unknown149"
+    Unknown150:
+      name: "Unknown150"
+    Unknown151:
+      name: "Unknown151"
+    Unknown152:
+      name: "Unknown152"
+
+    Unknown161:
+      name: "Unknown161"
+
+    Unknown180:
+      name: "Unknown180"
