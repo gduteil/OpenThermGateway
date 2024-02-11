@@ -3,7 +3,7 @@
 This is another ESPHome implementation for OpenThermGateway based on [@arthurrump's ESPHome OpenTherm](https://github.com/arthurrump/esphome-opentherm) and [@ihormelnyk's OpenTherm Library](https://github.com/ihormelnyk/opentherm_library)
 
 Communication is stable, values will be requested from boiler at initialization, and updated periodically if the thermostat doesn't request them.
-Overrides don't work yet.
+There is an override for room temperature setpoint, boiler should return it's target temperature but the thermostat will still show the previous temperature requested.
 
 I'm using this hardware [DIYLESS OpenTherm Gateway](https://diyless.com/product/esp8266-opentherm-gateway) with a ESP32 (WROOM), but it should work with other hardwares.
 
@@ -185,7 +185,13 @@ switch:
       name: "CH2"
 ```
 
+### OpenTherm number
 
+Number is used used for overrides, setting '0' will disable the override.
 
+number:
+  - platform: openthermgw
+    t_roomset_override:
+      name: "Temperature Override"
 
 
