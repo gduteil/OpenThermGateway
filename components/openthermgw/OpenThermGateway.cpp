@@ -190,7 +190,7 @@ namespace esphome {
 		OpenThermMessageType requestType=m_otThermostat->getMessageType(request);
 		OpenThermMessageID requestDataID=m_otThermostat->getDataID(request);
 		uint16_t requestData=(uint16_t)request;
-			
+
 		ESP_LOGD(TAG, "Thermostat request (%08X) : MessageType: %s, DataID: %d, Data: %x] (%s)", request, m_otThermostat->messageTypeToString(requestType), requestDataID, requestData, m_otThermostat->statusToString(status));
 
 		if(status==OpenThermResponseStatus::SUCCESS)
@@ -198,13 +198,30 @@ namespace esphome {
 			parseRequest(requestType, requestDataID, requestData);
 			if(m_otBoiler!=NULL)
 			{
+				// Handle overrides
+#ifdef OPENTHERMGW_HAS_NUMBER_t_roomset_override
+				if(requestDataID==OpenThermMessageID::TrSet)
+				{
+					if(this->t_roomset_override_number->has_state())
+					{
+						float fValue=this->t_roomset_override_number->state;
+						if(fValue!=0.)
+						{
+							unsigned int data = m_otBoiler->temperatureToData(fValue);
+							unsigned int requestOverride=m_otBoiler->buildRequest(OpenThermMessageType::WRITE_DATA, requestDataID, data);
+							ESP_LOGD(TAG, "t_roomsetoverride : %f (%x -> %x)", fValue, request, requestOverride);
+
+							request=requestOverride;
+						}
+					}
+				}
+#endif
 				unsigned long response = m_otBoiler->sendRequest(request);
-				if (response!=0) 
-				{		
+				if (response!=0)
+				{
 					OpenThermMessageType responseType=m_otThermostat->getMessageType(response);
 					OpenThermMessageID responseDataID=m_otThermostat->getDataID(response);
 					uint16_t responseData=(uint16_t)response;
-						
 					m_otThermostat->sendResponse(response);
 					parseResponse(responseType, responseDataID, responseData);
 				}
@@ -219,6 +236,7 @@ namespace esphome {
 	void OpenThermGateway::parseResponse(OpenThermMessageType type, OpenThermMessageID dataID, uint16_t data)
 	{
 		bool bHandled=false;
+
 		ESP_LOGD(TAG, "Boiler response [MessageType: %s, DataID: %d, Data: %x]", m_otBoiler->messageTypeToString(type), dataID, data);
 		
 		if(dataID==OpenThermMessageID::Status)
@@ -258,8 +276,7 @@ namespace esphome {
 			default:
 				break;
 		}
-		
-		
+
 		if(!bHandled)
 		{
 			// Define the handler helpers to publish the results to all sensors

@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include "switch.h"
+#include "number.h"
 
 // Ensure that all component macros are defined, even if the component is not used
 #ifndef OPENTHERMGW_SENSOR_LIST
@@ -94,7 +95,7 @@ namespace esphome {
 			#define OPENTHERMGW_SET_SWITCH(entity) void set_ ## entity(OpenThermGatewaySwitch* sw) { this->entity = sw; }
 			OPENTHERMGW_SWITCH_LIST(OPENTHERMGW_SET_SWITCH, )
 
-			#define OPENTHERMGW_SET_NUMBER(entity) void set_ ## entity(OpenthermNumber* number) { this->entity = number; }
+			#define OPENTHERMGW_SET_NUMBER(entity) void set_ ## entity(OpenThermGatewayNumber* number) { this->entity = number; }
 			OPENTHERMGW_NUMBER_LIST(OPENTHERMGW_SET_NUMBER, )
 
 			#define OPENTHERMGW_SET_OUTPUT(entity) void set_ ## entity(OpenthermOutput* output) { this->entity = output; }
@@ -118,7 +119,6 @@ namespace esphome {
 					((OpenThermGateway *)pCallbackUser)->processRequestThermostat(request, status);
 			}
 
-	        protected:
 
 		private:
 			uint8_t m_pinThermostatIn = 0;
@@ -156,7 +156,7 @@ namespace esphome {
 			#define OPENTHERMGW_DECLARE_SWITCH(entity) OpenThermGatewaySwitch* entity;
 			OPENTHERMGW_SWITCH_LIST(OPENTHERMGW_DECLARE_SWITCH, )
 
-			#define OPENTHERMGW_DECLARE_NUMBER(entity) OpenthermNumber* entity;
+			#define OPENTHERMGW_DECLARE_NUMBER(entity) OpenThermGatewayNumber* entity;
 			OPENTHERMGW_NUMBER_LIST(OPENTHERMGW_DECLARE_NUMBER, )
 
 			#define OPENTHERMGW_DECLARE_OUTPUT(entity) OpenthermOutput* entity;
@@ -176,10 +176,10 @@ namespace esphome {
 			
 			std::unordered_set<OpenThermMessageID>::const_iterator m_current_message_iterator;
 			std::unordered_map<OpenThermMessageID, SAutoUpdateMessage>::const_iterator m_auto_update_message_iterator;
-			
-    			static OpenTherm *m_otThermostat;
+
+			static OpenTherm *m_otThermostat;
 			static OpenTherm *m_otBoiler;
-			
+
 			static void IRAM_ATTR handleInterruptThermostat();
 			static void IRAM_ATTR handleInterruptBoiler();
 

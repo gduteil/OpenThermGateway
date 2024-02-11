@@ -1026,3 +1026,22 @@ INPUTS: Schema[InputSchema] = Schema({
         "range": (-40, 127),
     }),
 })
+
+class InputSchema(EntitySchema):
+    unit_of_measurement: str
+    range: Tuple[int, int]
+    auto_max_value: NotRequired[AutoConfigure]
+    auto_min_value: NotRequired[AutoConfigure]
+
+INPUTS: Schema[InputSchema] = Schema({
+    "t_roomset_override": InputSchema({
+        "description": "Current room temperature setpoint override",
+        "unit_of_measurement": UNIT_CELSIUS,
+        "message": "TSet",
+        "keep_updated": True,
+        "message_data": "f88",
+        "range": (0, 30),
+        "init": False,
+        "update_time": -1,
+    }),
+})
