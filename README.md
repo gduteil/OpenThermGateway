@@ -187,7 +187,7 @@ switch:
 
 ### OpenTherm number
 
-Number is used used for overrides, setting '0' will disable the override.
+Number is used for overrides, setting '0' will disable the override.
 
 ```yaml
 number:
