@@ -11,11 +11,17 @@ My boiler is an Atlantic NAEMA 2 MICRO 25 with a Navilink 128 RADIO-CONNECT.
 
 ## Installation
 
+Add to external section this repo :
+
+```yaml
+external_components:
+  - source: github://gduteil/OpenThermGateway
+    components: [ openthermgw ]
+```
+
+Alternately you can install the component manually :
 - Clone this repo and copy my_components in your "config/esphome" folder
 - Add the configuration in your YAML file (an example is in the repo)
-
-## Configuration
-After cloning you need to add the external_components section
 ```yaml
 external_components:  
   - source:
