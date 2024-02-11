@@ -189,9 +189,11 @@ switch:
 
 Number is used used for overrides, setting '0' will disable the override.
 
+```yaml
 number:
   - platform: openthermgw
     t_roomset_override:
       name: "Temperature Override"
+```
 
 
