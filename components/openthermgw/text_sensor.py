@@ -10,9 +10,9 @@ COMPONENT_TYPE = const.TEXT_SENSOR
 
 def get_entity_validation_schema(entity: schema.TextSensorSchema) -> cv.Schema:
     return text_sensor.text_sensor_schema(
-#        device_class = entity["device_class"] if "device_class" in entity else text_sensor._UNDEF,
-        icon = entity["icon"] if "icon" in entity else text_sensor._UNDEF,
-        entity_category = entity["entity_category"] if "entity_category" in entity else text_sensor._UNDEF
+#        device_class = entity["device_class"] if "device_class" in entity else "",
+        icon = entity["icon"] if "icon" in entity else "",
+        entity_category = entity["entity_category"] if "entity_category" in entity else ""
     )
 
 CONFIG_SCHEMA = validate.create_component_schema(schema.TEXT_SENSORS, get_entity_validation_schema)
