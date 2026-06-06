@@ -22,8 +22,8 @@ async def new_openthermgwswitch(config: Dict[str, Any]) -> cg.Pvariable:
     return var
 
 def get_entity_validation_schema(entity: schema.SwitchSchema) -> cv.Schema:
-    return switch.SWITCH_SCHEMA.extend({
-        cv.GenerateID(): cv.declare_id(OpenThermGatewaySwitch),
+    return switch.switch_schema(OpenThermGatewaySwitch).extend({
+       
 #        cv.Optional(CONF_MODE, entity["default_mode"]): 
 #            cv.enum({
 #                "restore_default_on": cg.RawExpression("openthermgw::OpenthermSwitchGWMode::OPENTHERM_SWITCH_RESTORE_DEFAULT_ON"), 
