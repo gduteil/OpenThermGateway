@@ -140,6 +140,10 @@ void IRAM_ATTR OpenTherm::handleInterrupt()
 {
 	unsigned long newTs = micros();
 		
+	// Filter interrupts glitchs
+	if ((newTs - lastInterruptTs) < 100)
+		return;
+
 	unsigned long deltaTs = newTs - responseTimestamp;
 
 	// Wait 30us before read state to make sure digitalRead() will return the "correct" value
