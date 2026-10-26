@@ -91,7 +91,7 @@ bool OpenTherm::sendRequestAsync(unsigned long request)
 	setIdleState();
 
 	status = OpenThermStatus::RESPONSE_WAITING;
-	responseTimestamp = micros();
+	responseTimestamp = esphome::esphome::micros();
 	return true;
 }
 
@@ -99,12 +99,12 @@ unsigned long OpenTherm::sendRequest(unsigned long request)
 {
 	while (!isReady()) {
 		process();
-		yield();
+		esphome::yield();
 	}
 	if (!sendRequestAsync(request)) return 0;
 	while (!isReady()) {
 		process();
-		yield();
+		esphome::yield();
 	}
 
 	return response;
@@ -138,7 +138,7 @@ OpenThermResponseStatus OpenTherm::getLastResponseStatus()
 
 void IRAM_ATTR OpenTherm::handleInterrupt()
 {
-	unsigned long newTs = micros();
+	unsigned long newTs = esphome::micros();
 		
 	// Filter interrupts glitchs
 	if ((newTs - lastInterruptTs) < 100)
@@ -215,7 +215,7 @@ bool OpenTherm::process()
 	if (st == OpenThermStatus::READY) 
 		return bDidProcessMessage;
 		
-	unsigned long newTs = micros();		
+	unsigned long newTs = esphome::micros();		
 	if (st != OpenThermStatus::NOT_INITIALIZED && st != OpenThermStatus::DELAY && (newTs - ts) > 1000000) {
 		status = OpenThermStatus::READY;
 		responseStatus = OpenThermResponseStatus::TIMEOUT;
