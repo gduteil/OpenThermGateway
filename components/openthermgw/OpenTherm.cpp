@@ -60,14 +60,14 @@ void OpenTherm::setIdleState() {
 
 void OpenTherm::activateBoiler() {
 	setIdleState();
-	delay(1000);
+	esphome::delay(1000);
 }
 
 void OpenTherm::sendBit(bool high) {
 	if (high) setActiveState(); else setIdleState();
-	delayMicroseconds(500);
+	esphome::delayMicroseconds(500);
 	if (high) setIdleState(); else setActiveState();
-	delayMicroseconds(500);
+	esphome::delayMicroseconds(500);
 }
 
 bool OpenTherm::sendRequestAsync(unsigned long request)
@@ -148,7 +148,7 @@ void IRAM_ATTR OpenTherm::handleInterrupt()
 
 	// Wait 30us before read state to make sure digitalRead() will return the "correct" value
 	// I don't understand why but sometimes the interrupt is called but the input level is still in transition
-	delayMicroseconds(30);
+	esphome::delayMicroseconds(30);
 	
 	int state=readState();
 
