@@ -91,7 +91,7 @@ bool OpenTherm::sendRequestAsync(unsigned long request)
 	setIdleState();
 
 	status = OpenThermStatus::RESPONSE_WAITING;
-	responseTimestamp = esphome::esphome::micros();
+	responseTimestamp = esphome::micros();
 	return true;
 }
 
